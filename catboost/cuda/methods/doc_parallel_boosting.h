@@ -15,8 +15,8 @@
 #include <catboost/libs/helpers/progress_helper.h>
 #include <catboost/libs/helpers/vector_helpers.h>
 #include <catboost/libs/metrics/optimal_const_for_loss.h>
-#include <catboost/libs/options/boosting_options.h>
-#include <catboost/libs/options/loss_description.h>
+#include <catboost/private/libs/options/boosting_options.h>
+#include <catboost/private/libs/options/loss_description.h>
 #include <catboost/libs/overfitting_detector/overfitting_detector.h>
 
 #include <library/threading/local_executor/local_executor.h>
@@ -148,7 +148,7 @@ namespace NCatboostCuda {
                 CB_ENSURE(!TestDataProvider || !TestDataProvider->TargetData->GetBaseline(),
                     "You can't use boost_from_average with baseline now.");
                 cursors->StartingPoint = NCB::CalcOptimumConstApprox(
-                    CatBoostOptions.LossFunctionDescription->GetLossFunction(),
+                    CatBoostOptions.LossFunctionDescription,
                     DataProvider->TargetData->GetTarget().GetOrElse(TConstArrayRef<float>()),
                     GetWeights(*DataProvider->TargetData));
             }
