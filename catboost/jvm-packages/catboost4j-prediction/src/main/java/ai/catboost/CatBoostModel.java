@@ -26,13 +26,13 @@ public class CatBoostModel implements AutoCloseable {
      * @throws CatBoostError When failed to load model.
      */
     @NotNull
-    public static CatBoostModel loadModel(final @NotNull String modelPath) throws CatBoostError {
+    public static CatBoostModel loadModel(final @NotNull String modelPath, final int suggestedFeatureCount) throws CatBoostError {
         final long[] handles = new long[1];
         final int[] predictionDimension = new int[1];
         final int[] treeCount = new int[1];
         final int[] usedNumericFeatureCount = new int[1];
         final int[] usedCatFeatureCount = new int[1];
-        int usedFeatureCount = 0;
+        int usedFeatureCount = suggestedFeatureCount;
         String[] featureNames;
 
         final CatBoostModel model = new CatBoostModel();
@@ -48,9 +48,10 @@ public class CatBoostModel implements AutoCloseable {
             model.close();
             throw e;
         }
-
+        
         try {
-            usedFeatureCount = usedNumericFeatureCount[0] + usedCatFeatureCount[0];
+            if (usedFeatureCount == 0)
+                usedFeatureCount = usedNumericFeatureCount[0] + usedCatFeatureCount[0];
             featureNames = new String[usedFeatureCount];
             NativeLib.handle().catBoostModelGetFeatureNames(model.handle, featureNames);
         } catch (CatBoostError e) {
@@ -132,7 +133,7 @@ public class CatBoostModel implements AutoCloseable {
      * @return           Hash for categorical feature.
      * @throws CatBoostError In case of error within native library.
      */
-    static int hashCategoricalFeature(final @NotNull String catFeature) throws CatBoostError {
+    public static int hashCategoricalFeature(final @NotNull String catFeature) throws CatBoostError {
         int hash[] = new int[1];
         NativeLib.handle().catBoostHashCatFeature(catFeature, hash);
         return hash[0];
