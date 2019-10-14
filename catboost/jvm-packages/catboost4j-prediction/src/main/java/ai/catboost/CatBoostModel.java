@@ -252,11 +252,11 @@ public class CatBoostModel implements AutoCloseable {
             final @Nullable float[] numericFeatures,
             final @Nullable int[] catFeatureHashes,
             final @NotNull CatBoostPredictions prediction) throws CatBoostError {
+        double[] rawPrediction = prediction.getRawData();
         NativeLib.handle().catBoostModelPredict(
                 handle,
                 numericFeatures,
-                catFeatureHashes,
-                prediction.getRawData());
+                catFeatureHashes, rawPrediction);
     }
 
     /**

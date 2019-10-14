@@ -269,7 +269,7 @@ static size_t GetArraySize(JNIEnv* const jenv, const jarray array) {
 JNIEXPORT jstring JNICALL Java_ai_catboost_CatBoostJNIImpl_catBoostModelPredict__J_3F_3Ljava_lang_String_2_3D
   (JNIEnv* jenv, jclass, jlong jhandle, jfloatArray jnumericFeatures, jobjectArray jcatFeatures, jdoubleArray jprediction) {
     Y_BEGIN_JNI_API_CALL();
-
+    
     const auto* const model = ToConstFullModelPtr(jhandle);
     CB_ENSURE(model, "got nullptr model pointer");
     const size_t modelPredictionSize = model->GetDimensionsCount();
@@ -344,7 +344,7 @@ static size_t GetMatrixColumnCount(JNIEnv* const jenv, const jobjectArray matrix
 JNIEXPORT jstring JNICALL Java_ai_catboost_CatBoostJNIImpl_catBoostModelPredict__J_3_3F_3_3Ljava_lang_String_2_3D
   (JNIEnv* jenv, jclass, jlong jhandle, jobjectArray jnumericFeaturesMatrix, jobjectArray jcatFeaturesMatrix, jdoubleArray jpredictions) {
     Y_BEGIN_JNI_API_CALL();
-
+        
     const auto* const model = ToConstFullModelPtr(jhandle);
     CB_ENSURE(model, "got nullptr model pointer");
     const size_t modelPredictionSize = model->GetDimensionsCount();
@@ -453,7 +453,7 @@ JNIEXPORT jstring JNICALL Java_ai_catboost_CatBoostJNIImpl_catBoostModelPredict_
 JNIEXPORT jstring JNICALL Java_ai_catboost_CatBoostJNIImpl_catBoostModelPredict__J_3F_3I_3D
   (JNIEnv* jenv, jclass, jlong jhandle, jfloatArray jnumericFeatures, jintArray jcatFeatures, jdoubleArray jprediction) {
     Y_BEGIN_JNI_API_CALL();
-
+    
     const auto* const model = ToConstFullModelPtr(jhandle);
     CB_ENSURE(model, "got nullptr model pointer");
     const size_t modelPredictionSize = model->GetDimensionsCount();
@@ -521,7 +521,7 @@ JNIEXPORT jstring JNICALL Java_ai_catboost_CatBoostJNIImpl_catBoostModelPredict_
 JNIEXPORT jstring JNICALL Java_ai_catboost_CatBoostJNIImpl_catBoostModelPredict__J_3_3F_3_3I_3D
   (JNIEnv* jenv, jclass, jlong jhandle, jobjectArray jnumericFeaturesMatrix, jobjectArray jcatFeaturesMatrix, jdoubleArray jpredictions) {
     Y_BEGIN_JNI_API_CALL();
-
+    
     const auto* const model = ToConstFullModelPtr(jhandle);
     CB_ENSURE(model, "got nullptr model pointer");
     const size_t modelPredictionSize = model->GetDimensionsCount();
@@ -537,13 +537,13 @@ JNIEXPORT jstring JNICALL Java_ai_catboost_CatBoostJNIImpl_catBoostModelPredict_
     CB_ENSURE(
         catFeatureCount >= minCatFeatureCount,
         LabeledOutput(catFeatureCount, minCatFeatureCount));
-
+    
     if (numericFeatureCount && catFeatureCount) {
         const auto numericRows = jenv->GetArrayLength(jnumericFeaturesMatrix);
         const auto catRows = jenv->GetArrayLength(jcatFeaturesMatrix);
         CB_ENSURE(numericRows == catRows, LabeledOutput(numericRows, catRows));
     }
-
+    
     const size_t documentCount = numericFeatureCount
         ? jenv->GetArrayLength(jnumericFeaturesMatrix)
         : jenv->GetArrayLength(jcatFeaturesMatrix);
@@ -557,21 +557,23 @@ JNIEXPORT jstring JNICALL Java_ai_catboost_CatBoostJNIImpl_catBoostModelPredict_
         predictionsSize >= documentCount * modelPredictionSize,
         "`prediction` size is insufficient, must be at least document count * model prediction dimension: "
         LabeledOutput(predictionsSize, documentCount * modelPredictionSize));
-
+    
     TVector<jfloatArray> numericFeatureMatrixRowObjects;
     TVector<TConstArrayRef<float>> numericFeatureMatrixRows;
     TVector<jintArray> catFeatureMatrixRowObjects;
     TVector<TConstArrayRef<int>> catFeatureMatrixRows;
-
-    Y_SCOPE_EXIT(jenv, &numericFeatureMatrixRowObjects, &numericFeatureMatrixRows) {
-        const auto size = numericFeatureMatrixRows.size();
-        for (size_t i = 0; i < size; ++i) {
-            jenv->ReleaseFloatArrayElements(
-                numericFeatureMatrixRowObjects[i],
-                const_cast<float*>(numericFeatureMatrixRows[i].data()),
-                0);
-        }
-    };
+    
+    // TODO these lines of code is a cause of SIGSEGV during model evaluation
+    // Without these lines there is a huge memory leak that should be fixed
+//     Y_SCOPE_EXIT(jenv, &numericFeatureMatrixRowObjects, &numericFeatureMatrixRows) {
+//         const auto size = numericFeatureMatrixRows.size();
+//         for (size_t i = 0; i < size; ++i) {
+//             jenv->ReleaseFloatArrayElements(
+//                 numericFeatureMatrixRowObjects[i],
+//                 const_cast<float*>(numericFeatureMatrixRows[i].data()),
+//                 0);
+//         }
+//     };
 
     if (numericFeatureCount) {
         numericFeatureMatrixRowObjects.reserve(documentCount);
@@ -593,16 +595,18 @@ JNIEXPORT jstring JNICALL Java_ai_catboost_CatBoostJNIImpl_catBoostModelPredict_
                 numericFeatureCount));
         }
     }
-
-    Y_SCOPE_EXIT(jenv, &catFeatureMatrixRowObjects, &catFeatureMatrixRows) {
-        const auto size = catFeatureMatrixRows.size();
-        for (size_t i = 0; i < size; ++i) {
-            jenv->ReleaseIntArrayElements(
-                catFeatureMatrixRowObjects[i],
-                const_cast<jint*>(reinterpret_cast<const jint*>(catFeatureMatrixRows[i].data())),
-                0);
-        }
-    };
+    
+    // TODO these lines of code is a cause of SIGSEGV during model evaluation
+    // Without these lines there is a huge memory leak that should be fixed
+//     Y_SCOPE_EXIT(jenv, &catFeatureMatrixRowObjects, &catFeatureMatrixRows) {
+//         const auto size = catFeatureMatrixRows.size();
+//         for (size_t i = 0; i < size; ++i) {
+//             jenv->ReleaseIntArrayElements(
+//                 catFeatureMatrixRowObjects[i],
+//                 const_cast<jint*>(reinterpret_cast<const jint*>(catFeatureMatrixRows[i].data())),
+//                 0);
+//         }
+//     };
 
     if (catFeatureCount) {
         catFeatureMatrixRowObjects.reserve(documentCount);
@@ -625,13 +629,13 @@ JNIEXPORT jstring JNICALL Java_ai_catboost_CatBoostJNIImpl_catBoostModelPredict_
                 catFeatureCount));
         }
     }
-
+    
     TVector<double> predictions;
     predictions.yresize(documentCount * modelPredictionSize);
     model->Calc(numericFeatureMatrixRows, catFeatureMatrixRows, predictions);
-
+    
     jenv->SetDoubleArrayRegion(jpredictions, 0, predictions.size(), predictions.data());
-
+    
     Y_END_JNI_API_CALL();
 }
 
